@@ -203,5 +203,12 @@ go run . generate-mapper \
     --output-dir ${OUTPUT_MAPPER} \
     --api-dir ${APIS_DIR}
 
+# IAMSettings
+go run . generate-types \
+    --service google.cloud.iap.v1 \
+    --api-version iap.cnrm.cloud.google.com/v1alpha1 \
+    --kind IAPSettings \
+    --proto-resource IapSettings
+
 # Fix up formatting
 ${REPO_ROOT}/dev/tasks/fix-gofmt
