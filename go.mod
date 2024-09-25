@@ -16,6 +16,7 @@ require (
 	cloud.google.com/go/dataform v0.10.0
 	cloud.google.com/go/firestore v1.16.0
 	cloud.google.com/go/iam v1.2.0
+	cloud.google.com/go/iap v1.10.0
 	cloud.google.com/go/monitoring v1.21.0
 	cloud.google.com/go/profiler v0.4.1
 	cloud.google.com/go/redis v1.17.0
