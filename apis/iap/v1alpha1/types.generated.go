@@ -144,18 +144,6 @@ type GcipSettings struct {
 	LoginPageUri *string `json:"loginPageUri,omitempty"`
 }
 
-// +kcc:proto=google.cloud.iap.v1.IapSettings
-type IapSettings struct {
-	// Required. The resource name of the IAP protected resource.
-	Name *string `json:"name,omitempty"`
-
-	// Top level wrapper for all access related setting in IAP
-	AccessSettings *AccessSettings `json:"accessSettings,omitempty"`
-
-	// Top level wrapper for all application related settings in IAP
-	ApplicationSettings *ApplicationSettings `json:"applicationSettings,omitempty"`
-}
-
 // +kcc:proto=google.cloud.iap.v1.OAuthSettings
 type OAuthSettings struct {
 	// Domain hint to send as hd=? parameter in OAuth request flow. Enables

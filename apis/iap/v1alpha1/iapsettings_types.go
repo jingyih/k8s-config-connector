@@ -21,17 +21,23 @@ import (
 
 var IAPSettingsGVK = GroupVersion.WithKind("IAPSettings")
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
-
 // IAPSettingsSpec defines the desired state of IAPSettings
 // +kcc:proto=google.cloud.iap.v1.IapSettings
 type IAPSettingsSpec struct {
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="ResourceID field is immutable"
 	// Immutable.
 	// The IAPSettings name. If not given, the metadata.name will be used.
-	// + optional
 	ResourceID *string `json:"resourceID,omitempty"`
+
+	// Required. The resource name of the IAP protected resource.
+	// +required
+	Name *string `json:"name,omitempty"`
+
+	// Top level wrapper for all access related setting in IAP
+	AccessSettings *AccessSettings `json:"accessSettings,omitempty"`
+
+	// Top level wrapper for all application related settings in IAP
+	ApplicationSettings *ApplicationSettings `json:"applicationSettings,omitempty"`
 }
 
 // IAPSettingsStatus defines the config connector machine state of IAPSettings
