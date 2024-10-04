@@ -43,10 +43,11 @@ const (
 )
 
 func init() {
-	registry.RegisterModel(krm.BigQueryDataTransferConfigGVK, NewModel)
+	registry.RegisterModel(krm.BigQueryDataTransferConfigGVK, newModel)
+	fmt.Printf("[debug] model 1 is registered\n")
 }
 
-func NewModel(ctx context.Context, config *config.ControllerConfig) (directbase.Model, error) {
+func newModel(ctx context.Context, config *config.ControllerConfig) (directbase.Model, error) {
 	return &model{config: *config}, nil
 }
 

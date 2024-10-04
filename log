@@ -1,0 +1,6 @@
+[debug] model 2 is registered
+[debug] model 1 is registered
+=== RUN   TestAllInSeries
+=== RUN   TestAllInSeries/fixtures
+=== RUN   TestAllInSeries/fixtures/bigquerydatatransferconfig-salesforce
+    harness.go:168: starting envtest apiserver
