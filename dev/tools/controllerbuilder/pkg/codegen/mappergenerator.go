@@ -177,8 +177,8 @@ func (v *MapperGenerator) GenerateMappers() error {
 		}
 		out := v.getOutputFile(k)
 		out.packageName = lastGoComponent(goPackage)
-		
-		 {
+
+		{
 			pbPackage := pair.ProtoGoPackage
 			krmPackage := pair.KRMType.GoPackage
 
