@@ -24,7 +24,7 @@ import (
 	"google.golang.org/api/option"
 )
 
-func (u *TypeUpdater) insertGoMessagesGemini() error {
+func (u *FieldInserter) insertGoMessagesGemini() error {
 	ctx := context.Background()
 	client, err := genai.NewClient(ctx, option.WithAPIKey(os.Getenv("GEMINI_API_KEY")))
 	if err != nil {
