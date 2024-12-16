@@ -30,8 +30,6 @@ import (
 	"k8s.io/klog"
 )
 
-const kccProtoPrefix = "+kcc:proto="
-
 type InsertFieldOptions struct {
 	ParentMessageFullName string
 	FieldToInsert         string
