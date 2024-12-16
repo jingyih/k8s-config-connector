@@ -30,23 +30,6 @@ import (
 	"k8s.io/klog/v2"
 )
 
-const (
-	// KCCProtoMessageAnnotation is used for go structs that map to proto messages
-	KCCProtoMessageAnnotation = "+kcc:proto"
-
-	// KCCProtoFieldAnnotation is used for go struct fields that map to proto fields
-	KCCProtoFieldAnnotation = "+kcc:proto:field"
-)
-
-// Some special-case values that are not obvious how to map in KRM
-var protoMessagesNotMappedToGoStruct = map[string]string{
-	"google.protobuf.Timestamp":   "string",
-	"google.protobuf.Duration":    "string",
-	"google.protobuf.Int64Value":  "int64",
-	"google.protobuf.StringValue": "string",
-	"google.protobuf.Struct":      "map[string]string",
-}
-
 type TypeGenerator struct {
 	generatorBase
 	api             *protoapi.Proto
@@ -86,7 +69,7 @@ func (g *TypeGenerator) visitMessage(messageDescriptor protoreflect.MessageDescr
 
 	g.visitedMessages = append(g.visitedMessages, messageDescriptor)
 
-	msgs, err := findDependenciesForMessage(messageDescriptor)
+	msgs, err := FindDependenciesForMessage(messageDescriptor)
 	if err != nil {
 		return err
 	}
@@ -131,7 +114,7 @@ func (g *TypeGenerator) WriteVisitedMessages() error {
 		}
 		out := g.getOutputFile(k)
 
-		goTypeName := goNameForProtoMessage(msg)
+		goTypeName := GoNameForProtoMessage(msg)
 		skipGenerated := true
 		goType, err := g.findTypeDeclaration(goTypeName, out.OutputDir(), skipGenerated)
 		if err != nil {
@@ -159,7 +142,7 @@ func (g *TypeGenerator) WriteVisitedMessages() error {
 }
 
 func WriteMessage(out io.Writer, msg protoreflect.MessageDescriptor) {
-	goType := goNameForProtoMessage(msg)
+	goType := GoNameForProtoMessage(msg)
 
 	fmt.Fprintf(out, "\n")
 	fmt.Fprintf(out, "// %s=%s\n", KCCProtoMessageAnnotation, msg.FullName())
@@ -171,51 +154,58 @@ func WriteMessage(out io.Writer, msg protoreflect.MessageDescriptor) {
 	fmt.Fprintf(out, "}\n")
 }
 
-func WriteField(out io.Writer, field protoreflect.FieldDescriptor, msg protoreflect.MessageDescriptor, fieldIndex int) {
-	sourceLocations := msg.ParentFile().SourceLocations().ByDescriptor(field)
-
-	jsonName := getJSONForKRM(field)
-	goFieldName := goFieldName(field)
-	goType := ""
-
+func GoType(field protoreflect.FieldDescriptor) (string, error) {
 	if field.IsMap() {
 		entryMsg := field.Message()
 		keyKind := entryMsg.Fields().ByName("key").Kind()
 		valueKind := entryMsg.Fields().ByName("value").Kind()
 		if keyKind == protoreflect.StringKind && valueKind == protoreflect.StringKind {
-			goType = "map[string]string"
+			return "map[string]string", nil
 		} else if keyKind == protoreflect.StringKind && valueKind == protoreflect.Int64Kind {
-			goType = "map[string]int64"
+			return "map[string]int64", nil
 		} else {
-			fmt.Fprintf(out, "\n\t// TODO: map type %v %v for %v\n\n", keyKind, valueKind, field.Name())
-			return
+			return "", fmt.Errorf("unsupported map type with key %v and value %v", keyKind, valueKind)
 		}
+	}
+
+	var goType string
+	switch field.Kind() {
+	case protoreflect.MessageKind:
+		goType = GoNameForProtoMessage(field.Message())
+	case protoreflect.EnumKind:
+		goType = "string"
+	default:
+		goType = goTypeForProtoKind(field.Kind())
+	}
+
+	if field.Cardinality() == protoreflect.Repeated {
+		goType = "[]" + goType
 	} else {
-		switch field.Kind() {
-		case protoreflect.MessageKind:
-			goType = goNameForProtoMessage(field.Message())
+		goType = "*" + goType
+	}
 
-		case protoreflect.EnumKind:
-			goType = "string" //string(field.Enum().Name())
+	// Special case for proto "bytes" type
+	if goType == "*[]byte" {
+		goType = "[]byte"
+	}
+	// Special case for proto "google.protobuf.Struct" type
+	if goType == "*map[string]string" {
+		goType = "map[string]string"
+	}
 
-		default:
-			goType = goTypeForProtoKind(field.Kind())
-		}
+	return goType, nil
+}
 
-		if field.Cardinality() == protoreflect.Repeated {
-			goType = "[]" + goType
-		} else {
-			goType = "*" + goType
-		}
+func WriteField(out io.Writer, field protoreflect.FieldDescriptor, msg protoreflect.MessageDescriptor, fieldIndex int) {
+	sourceLocations := msg.ParentFile().SourceLocations().ByDescriptor(field)
 
-		// Special case for proto "bytes" type
-		if goType == "*[]byte" {
-			goType = "[]byte"
-		}
-		// Special case for proto "google.protobuf.Struct" type
-		if goType == "*map[string]string" {
-			goType = "map[string]string"
-		}
+	jsonName := GetJSONForKRM(field)
+	GoFieldName := goFieldName(field)
+
+	goType, err := GoType(field)
+	if err != nil {
+		fmt.Fprintf(out, "\n\t// TODO: %v\n\n", err)
+		return
 	}
 
 	// Blank line between fields for readability
@@ -236,7 +226,7 @@ func WriteField(out io.Writer, field protoreflect.FieldDescriptor, msg protorefl
 
 	fmt.Fprintf(out, "\t// %s=%s\n", KCCProtoFieldAnnotation, field.FullName())
 	fmt.Fprintf(out, "\t%s %s `json:\"%s,omitempty\"`\n",
-		goFieldName,
+		GoFieldName,
 		goType,
 		jsonName,
 	)
@@ -261,7 +251,7 @@ func deduplicateAndSort(messages []protoreflect.MessageDescriptor) []protoreflec
 	return messages
 }
 
-func goNameForProtoMessage(msg protoreflect.MessageDescriptor) string {
+func GoNameForProtoMessage(msg protoreflect.MessageDescriptor) string {
 	fullName := string(msg.FullName())
 
 	// Some special-case values that are not obvious how to map in KRM
@@ -315,16 +305,16 @@ func goTypeForProtoKind(kind protoreflect.Kind) string {
 	return goType
 }
 
-// getJSONForKRM returns the KRM JSON name for the field,
+// GetJSONForKRM returns the KRM JSON name for the field,
 // honoring KRM conventions
-func getJSONForKRM(protoField protoreflect.FieldDescriptor) string {
+func GetJSONForKRM(protoField protoreflect.FieldDescriptor) string {
 	tokens := strings.Split(string(protoField.Name()), "_")
 	for i, token := range tokens {
 		if i == 0 {
 			// Do not capitalize first token
 			continue
 		}
-		if isAcronym(token) {
+		if IsAcronym(token) {
 			token = strings.ToUpper(token)
 		} else {
 			token = strings.Title(token)
@@ -339,7 +329,7 @@ func getJSONForKRM(protoField protoreflect.FieldDescriptor) string {
 func goFieldName(protoField protoreflect.FieldDescriptor) string {
 	tokens := strings.Split(string(protoField.Name()), "_")
 	for i, token := range tokens {
-		if isAcronym(token) {
+		if IsAcronym(token) {
 			token = strings.ToUpper(token)
 		} else {
 			token = strings.Title(token)
@@ -349,35 +339,8 @@ func goFieldName(protoField protoreflect.FieldDescriptor) string {
 	return strings.Join(tokens, "")
 }
 
-func isAcronym(s string) bool {
-	switch s {
-	case "id":
-		return true
-	case "html", "url":
-		return true
-	case "http", "https", "ssh":
-		return true
-	case "ip":
-		return true
-	case "gb":
-		return true
-	case "fs":
-		return true
-	case "pd":
-		return true
-	case "kms":
-		return true
-	case "gce":
-		return true
-	case "vtpm":
-		return true
-	default:
-		return false
-	}
-}
-
-// findDependenciesForMessage recursively explores the dependent proto messages of the given message.
-func findDependenciesForMessage(message protoreflect.MessageDescriptor) ([]protoreflect.MessageDescriptor, error) {
+// FindDependenciesForMessage recursively explores the dependent proto messages of the given message.
+func FindDependenciesForMessage(message protoreflect.MessageDescriptor) ([]protoreflect.MessageDescriptor, error) {
 	msgs := make(map[string]protoreflect.MessageDescriptor)
 	for i := 0; i < message.Fields().Len(); i++ {
 		field := message.Fields().Get(i)
