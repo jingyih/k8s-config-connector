@@ -36,6 +36,7 @@ which protoc || sudo apt install -y protobuf-compiler
 # sudo brew install protobuf
 
 protoc --include_imports --include_source_info \
+    --experimental_allow_proto3_optional \
     -I ${THIRD_PARTY}/googleapis/ \
     -I ${REPO_ROOT}/mockgcp/apis \
     ${REPO_ROOT}/mockgcp/apis/mockgcp/cloud/networkconnectivity/*/*.proto \
