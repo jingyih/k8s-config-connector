@@ -21,6 +21,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/GoogleCloudPlatform/k8s-config-connector/dev/tools/controllerbuilder/pkg/options"
@@ -144,4 +145,91 @@ func RunGenerateFuzzer(ctx context.Context, opt *generateFuzzerOptions) error {
 	}
 
 	return nil
+}
+
+// TODO: can LLM do a better job finding the top level mappers?
+func findMapperFunctions(protoMsg string, dir string) ([]string, error) {
+	// Extract resource name from proto message
+	parts := strings.Split(protoMsg, ".")
+	resourceName := parts[len(parts)-1] // e.g., "TransferConfig"
+	servicePrefix := getServicePrefix(protoMsg)
+
+	// Define the possible status suffixes
+	statusSuffixes := []string{
+		"ObservedState",
+		"Status",
+	}
+
+	// Build all possible mapper patterns
+	var patterns []string
+	// Add Spec patterns
+	patterns = append(patterns,
+		// Without service prefix
+		fmt.Sprintf("%sSpec_FromProto", resourceName),
+		fmt.Sprintf("%sSpec_ToProto", resourceName),
+		// With service prefix
+		fmt.Sprintf("%s%sSpec_FromProto", servicePrefix, resourceName),
+		fmt.Sprintf("%s%sSpec_ToProto", servicePrefix, resourceName),
+	)
+	// Add Status/ObservedState patterns
+	for _, statusSuffix := range statusSuffixes {
+		patterns = append(patterns,
+			// Without service prefix
+			fmt.Sprintf("%s%s_FromProto", resourceName, statusSuffix),
+			fmt.Sprintf("%s%s_ToProto", resourceName, statusSuffix),
+			// With service prefix
+			fmt.Sprintf("%s%s%s_FromProto", servicePrefix, resourceName, statusSuffix),
+			fmt.Sprintf("%s%s%s_ToProto", servicePrefix, resourceName, statusSuffix),
+		)
+	}
+
+	var foundMappers []string
+	foundSpecMappers := false
+	foundStatusMappers := false
+
+	// Look for files in directory
+	files, err := os.ReadDir(dir)
+	if err != nil {
+		return nil, fmt.Errorf("reading directory %s: %w", dir, err)
+	}
+
+	for _, file := range files {
+		if !file.IsDir() && strings.HasSuffix(file.Name(), ".go") {
+			content, err := os.ReadFile(filepath.Join(dir, file.Name()))
+			if err != nil {
+				return nil, err
+			}
+
+			lines := strings.Split(string(content), "\n")
+			for _, line := range lines {
+				line = strings.TrimSpace(line)
+				if !strings.HasPrefix(line, "func ") {
+					continue
+				}
+
+				funcName := strings.TrimPrefix(line, "func ")
+				funcName = strings.Split(funcName, "(")[0]
+
+				for _, pattern := range patterns {
+					if funcName == pattern {
+						foundMappers = append(foundMappers, funcName)
+						if strings.Contains(funcName, "Spec_") {
+							foundSpecMappers = true
+						} else {
+							foundStatusMappers = true
+						}
+						break
+					}
+				}
+			}
+		}
+	}
+
+	if !foundSpecMappers {
+		return nil, fmt.Errorf("no Spec mapper functions found for %s", resourceName)
+	}
+
+	// Sort mappers to ensure consistent order
+	sort.Strings(foundMappers)
+	return foundMappers, nil
 }

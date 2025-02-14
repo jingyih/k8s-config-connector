@@ -14,6 +14,7 @@
 
 // +tool:fuzz-gen
 // proto.message: google.cloud.discoveryengine.v1.Engine
+// mappers: DiscoveryEngineEngineSpec_FromProto, DiscoveryEngineEngineSpec_ToProto, DiscoveryEngineEngineObservedState_FromProto, DiscoveryEngineEngineObservedState_ToProto
 
 package discoveryengine
 

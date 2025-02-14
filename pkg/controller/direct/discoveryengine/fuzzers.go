@@ -14,6 +14,7 @@
 
 // +tool:fuzz-gen
 // proto.message: google.cloud.discoveryengine.v1.DataStore
+// mappers: DiscoveryEngineDataStoreSpec_FromProto, DiscoveryEngineDataStoreSpec_ToProto, DiscoveryEngineDataStoreObservedState_FromProto, DiscoveryEngineDataStoreObservedState_ToProto
 
 package discoveryengine
 

@@ -14,6 +14,7 @@
 
 // +tool:fuzz-gen
 // proto.message: google.cloud.privilegedaccessmanager.v1.Entitlement
+// mappers: PrivilegedAccessManagerEntitlementSpec_FromProto, PrivilegedAccessManagerEntitlementSpec_ToProto, PrivilegedAccessManagerEntitlementObservedState_FromProto, PrivilegedAccessManagerEntitlementObservedState_ToProto
 
 package privilegedaccessmanager
 

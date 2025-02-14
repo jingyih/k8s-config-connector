@@ -262,7 +262,7 @@ func (x *CSVExporter) InferOutput_WithChat(ctx context.Context, input *DataPoint
 }
 
 // InferOutput_WithCompletion tries to infer an output value, using the Completion LLM APIs.
-func (x *CSVExporter) InferOutput_WithCompletion(ctx context.Context, input *DataPoint, out io.Writer) error {
+func (x *CSVExporter) InferOutput_WithCompletion(ctx context.Context, model string, input *DataPoint, out io.Writer) error {
 	log := klog.FromContext(ctx)
 
 	client, err := llm.BuildVertexAIClient(ctx)
@@ -271,13 +271,17 @@ func (x *CSVExporter) InferOutput_WithCompletion(ctx context.Context, input *Dat
 	}
 	defer client.Close()
 
+	if model != "" {
+		client.WithModel(model)
+	}
+
 	var prompt strings.Builder
 
 	switch input.Type {
 	case "mockgcp-service", "mockgcp-support":
 		fmt.Fprintf(&prompt, "I'm implementing a mock for a proto API.  I need to implement go code that implements the proto service.  Here are some examples:\n")
 	case "fuzz-gen":
-		fmt.Fprintf(&prompt, "I'm implementing a fuzzer for a proto message.  I need to configure the fuzzer with the appropriate fields. Please only use the reference the exisitng mappers, not create new mappers.  Here are some examples:\n")
+		fmt.Fprintf(&prompt, "I'm implementing a fuzzer for a proto message.  I need to configure the fuzzer with the appropriate fields. Please only reference the exisitng mappers, do not create any new mapper.  Here are some examples:\n")
 	}
 
 	examples := x.pickExamples(input)

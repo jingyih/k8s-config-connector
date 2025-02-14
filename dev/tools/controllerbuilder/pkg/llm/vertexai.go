@@ -72,6 +72,11 @@ type VertexAIClient struct {
 	model  string
 }
 
+func (c *VertexAIClient) WithModel(model string) *VertexAIClient {
+	c.model = model
+	return c
+}
+
 func (c *VertexAIClient) Close() error {
 	return c.client.Close()
 }

@@ -14,6 +14,7 @@
 
 // +tool:fuzz-gen
 // proto.message: google.cloud.managedkafka.v1.Topic
+// mappers: ManagedKafkaTopicSpec_FromProto, ManagedKafkaTopicSpec_ToProto
 
 package managedkafka
 
@@ -32,10 +33,6 @@ func managedKafkaTopicFuzzer() fuzztesting.KRMFuzzer {
 	)
 
 	f.UnimplementedFields.Insert(".name")
-
-	f.SpecFields.Insert(".configs")
-	f.SpecFields.Insert(".partition_count")
-	f.SpecFields.Insert(".replication_factor")
 
 	return f
 }

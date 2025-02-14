@@ -14,6 +14,7 @@
 
 // +tool:fuzz-gen
 // proto.message: google.cloud.iap.v1.IapSettings
+// mappers: IAPSettingsSpec_FromProto, IAPSettingsSpec_ToProto
 
 package iap
 
