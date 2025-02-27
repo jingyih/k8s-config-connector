@@ -82,3 +82,8 @@ type VertexAIFeaturestoreList struct {
 func init() {
 	SchemeBuilder.Register(&VertexAIFeaturestore{}, &VertexAIFeaturestoreList{})
 }
+type Featurestore struct {
+}
+
+
+
