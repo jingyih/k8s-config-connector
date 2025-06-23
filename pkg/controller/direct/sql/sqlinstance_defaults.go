@@ -22,14 +22,36 @@ import (
 	api "google.golang.org/api/sqladmin/v1beta4"
 )
 
+// isMaintenanceVersionAvailable checks if the given maintenance version is available in the list of available versions.
+func isMaintenanceVersionAvailable(version string, availableVersions []string) bool {
+	if version == "" || len(availableVersions) == 0 {
+		return false
+	}
+	for _, availableVersion := range availableVersions {
+		if availableVersion == version {
+			return true
+		}
+	}
+	return false
+}
+
 func ApplySQLInstanceGCPDefaults(in *krm.SQLInstance, out *api.DatabaseInstance, actual *api.DatabaseInstance) {
 	if in.Spec.InstanceType == nil {
 		// GCP default InstanceType is CLOUD_SQL_INSTANCE.
 		out.InstanceType = "CLOUD_SQL_INSTANCE"
 	}
 	if in.Spec.MaintenanceVersion == nil && actual != nil {
-		// If desired maintenanceVersion is not specified, assume user wants the actual.
-		out.MaintenanceVersion = actual.MaintenanceVersion
+		// If the user hasn't specified a maintenance version, we check if the
+		// current version on the instance is still a valid, available version
+		// for updates. If it is, we use it to prevent unintended drift.
+		// If it's not available (i.e., retired by the API), we omit the field
+		// from the update request, allowing the Cloud SQL API to handle selecting
+		// the next appropriate version during the maintenance window.
+		if actual.MaintenanceVersion != "" && len(actual.AvailableMaintenanceVersions) > 0 {
+			if isMaintenanceVersionAvailable(actual.MaintenanceVersion, actual.AvailableMaintenanceVersions) {
+				out.MaintenanceVersion = actual.MaintenanceVersion
+			}
+		}
 	}
 	if in.Spec.Settings.ActivationPolicy == nil {
 		// GCP default ActivationPolicy is ALWAYS.
